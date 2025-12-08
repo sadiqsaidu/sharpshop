@@ -1,20 +1,12 @@
 python-dotenv==1.0.0
 openai==1.10.0
 langgraph==0.0.28
-
-# FastAPI and server 
 fastapi==0.109.0
 uvicorn[standard]==0.27.0
 pydantic==2.5.3
-
-# Async HTTP client 
 httpx==0.26.0
-
-# Redis for session management 
 redis[hiredis]==5.0.1
-
-# AWS S3 for image storage 
 boto3==1.34.34
-
-# Logging (new)
 python-json-logger==2.0.7
+python-multipart
+twilio
