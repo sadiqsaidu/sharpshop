@@ -10,7 +10,7 @@ from typing import TypedDict, Annotated, Literal
 from langgraph.graph import StateGraph, END
 from openai import OpenAI
 
-from config import OPENROUTER_API_KEY, OPENROUTER_BASE_URL, MODEL_NAME, ALLOWED_CATEGORIES
+from config import GROQ_API_KEY, GROQ_BASE_URL, MODEL_NAME, ALLOWED_CATEGORIES
 from tools import create_product, query_inventory, update_product, list_products
 
 REQUIRED_FIELDS = ["title", "price", "category", "quantity", "condition"]
@@ -46,7 +46,7 @@ class AgentState(TypedDict):
 
 
 def create_client() -> OpenAI:
-    return OpenAI(base_url=OPENROUTER_BASE_URL, api_key=OPENROUTER_API_KEY)
+    return OpenAI(base_url=GROQ_BASE_URL, api_key=GROQ_API_KEY)
 
 
 def process_message(state: AgentState) -> AgentState:
