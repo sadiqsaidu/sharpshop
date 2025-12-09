@@ -1,134 +1,78 @@
 # SharpShop — Inventory Management Agent 🛍️🤖
 
-Welcome to SharpShop — a playful CLI chatbot that helps sellers manage their inventory by talking like a human. It uses a conversational flow (LangGraph-style) and an OpenRouter/OpenAI-compatible client to turn natural messages into actions (create, query, update, list).
+Welcome to SharpShop — a smart WhatsApp chatbot that helps sellers manage their inventory. It uses **LangGraph** for conversational flow and **Groq** (Llama 3) for intelligence.
 
-Why this is fun
-- Quick prototyping of conversational inventory flows
-- Mock tools in `tools.py` so you can swap in a real DB later
-- Friendly assistant that asks one clarifying question at a time ✨
+## Features
+- 🤖 **Conversational AI**: Understands natural language to manage inventory.
+- 📦 **Inventory Actions**: Create, query, update, and list products.
+- 📱 **WhatsApp Integration**: Works directly via Twilio Sandbox.
+- ⚡ **Fast Inference**: Powered by Groq.
 
-Features
-- Conversational agent that extracts structured actions from messages
-- Mocked inventory actions: create, query, update, list
-- Simple CLI interface (`main.py`) for quick testing
+## Prerequisites
+- Python 3.12+
+- [Ngrok](https://ngrok.com/) (for local testing)
+- [Twilio Account](https://www.twilio.com/) (for WhatsApp Sandbox)
+- [Groq API Key](https://console.groq.com/)
 
-Getting started — quick and safe (3 minutes)
-1. Clone the repo (or use your local copy)
+## Setup
 
-```bash
-git clone https://github.com/<your-username>/sharpshop.git
-cd sharpshop
-```
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/<your-username>/sharpshop.git
+   cd sharpshop
+   ```
 
-2. Create and activate a virtual environment
+2. **Create and activate a virtual environment**
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
 
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-3. Install dependencies
+4. **Configure Environment**
+   Create a `.env` file in the root directory:
+   ```bash
+   GROQ_API_KEY=your_groq_api_key_here
+   ```
 
-If `requirements.txt` exists:
+## Running the Bot
 
-```bash
-pip install -r requirements.txt
-```
+1. **Start the Server**
+   ```bash
+   python server.py
+   ```
+   The server will start on `http://0.0.0.0:8000`.
 
-Suggested minimal dependencies (add to `requirements.txt` if missing):
+2. **Expose Localhost via Ngrok**
+   In a separate terminal:
+   ```bash
+   ngrok http 8000
+   ```
+   Copy the HTTPS URL (e.g., `https://1234-56-78.ngrok-free.app`).
 
-```
-python-dotenv
-openai
-langgraph
-```
+3. **Configure Twilio Sandbox**
+   - Go to [Twilio Console > Messaging > Try it out > Send a WhatsApp message](https://console.twilio.com/).
+   - Connect your phone to the sandbox.
+   - Go to **Sandbox Settings**.
+   - Paste your Ngrok URL appended with `/whatsapp` into the **"When a message comes in"** field.
+     - Example: `https://1234-56-78.ngrok-free.app/whatsapp`
+   - Save settings.
 
-4. Add your API key (do NOT commit this file) 🔒
+## Usage
 
-Create a `.env` file in the project root with:
+Send messages to the Twilio Sandbox number:
 
-```
-OPENROUTER_API_KEY=your_openrouter_api_key_here
-```
+- **Add Product**: "I want to add Nike Shoes for 20000 naira, 5 in stock, new condition."
+- **Query**: "Do I have any shoes?"
+- **List**: "Show me all my products."
+- **Update**: "Update the price of Nike Shoes to 22000."
 
-Important: keep `.env` local only. Do not commit it — rotate the key if it ever gets pushed.
-
-5. Make sure `agent.py` loads env variables early
-
-`agent.py` should call `from dotenv import load_dotenv` and `load_dotenv()` before importing `config` so the API key is available at import time.
-
-6. Run the CLI
-
-```bash
-python3 main.py
-```
-
-Type a message, for example:
-`I want to add a product: "Nike Shoes", price: 20000, category: fashion, quantity: 5, condition: new.`
-
-Example interactions (chat-style)
-
----
-
-User: I want to add a product: "Nike Shoes", price: 20000, category: fashion, quantity: 5, condition: new.
-
-Agent (parsed action):
-
-```json
-{"action": "create_product", "data": {"title": "Nike Shoes", "price": 20000, "category": "fashion", "quantity": 5, "condition": "new"}}
-```
-
-Agent (confirmation):
-
-Agent: ✅ Product created: Nike Shoes (ID: PROD_0001) — NGN 20000 — quantity: 5
-
----
-
-User: Search for "Nike"
-
-Agent (parsed action):
-
-```json
-{"action": "query_inventory", "data": {"query": "Nike"}}
-```
-
-Agent (result):
-
-Agent: 🔎 Found 2 items matching 'Nike':
-- Nike Shoes — 5 in stock — NGN 20000 (ID: PROD_0001)
-- Nike T-Shirt — 10 in stock — NGN 8000 (ID: PROD_0002)
-
----
-
-User: Update product PROD_0001 price to 22000
-
-Agent (parsed action):
-
-```json
-{"action": "update_product", "data": {"product_id": "PROD_0001", "updates": {"price": 22000}}}
-```
-
-Agent (confirmation):
-
-Agent: ✅ Product PROD_0001 updated: price set to 22000
-
----
-
-User: Show me all products
-
-Agent (parsed action):
-
-```json
-{"action":"list_products","data":{"limit":10}}
-```
-
-Agent (result):
-
-Agent: 📋 Listing 3 products:
-1) Nike Shoes — 5 — NGN 20000
-2) Adidas Cap — 4 — NGN 3000
-3) Samsung Charger — 12 — NGN 4500
-
-Notes
-- The bot asks one clarifying question at a time if required fields are missing (keeps UX simple).
-- `tools.py` uses mock implementations — replace these with real DB calls when ready.
+## Project Structure
+- `server.py`: FastAPI server handling Twilio webhooks.
+- `agent.py`: LangGraph agent logic and state management.
+- `tools.py`: Mock inventory tools (replace with real DB calls).
+- `config.py`: Configuration settings.
