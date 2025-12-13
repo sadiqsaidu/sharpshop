@@ -1,9 +1,16 @@
-"""OpenRouter API configuration for LangGraph agent."""
+"""Configuration for WhatsApp bot."""
 import os
+from dotenv import load_dotenv
 
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-MODEL_NAME = "meta-llama/llama-3.3-70b-instruct:free"
+# Load environment variables from .env file
+load_dotenv()
 
-ALLOWED_CATEGORIES = ["fashion", "electronics", "home", "beauty", "sports", "food", "books", "other"]
-ALLOWED_CONDITIONS = ["new", "used", "refurbished"]
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_BASE_URL = "https://api.groq.com/openai/v1"
+MODEL_NAME = "llama-3.3-70b-versatile"
+
+# Supabase config 
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
+
+ALLOWED_CATEGORIES = ["Electronics", "Fashion", "Footwear", "Accessories", "Home & Living"]
