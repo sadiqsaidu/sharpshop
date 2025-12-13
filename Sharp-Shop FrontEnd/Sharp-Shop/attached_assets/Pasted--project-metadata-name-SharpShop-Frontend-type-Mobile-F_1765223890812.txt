@@ -1,0 +1,61 @@
+{
+  "project_metadata": {
+    "name": "SharpShop Frontend",
+    "type": "Mobile-First E-commerce PWA",
+    "core_concept": "TikTok-style vertical scrolling store for Nigerian traders.",
+    "backend_context": "The backend is a 'Headless WhatsApp CMS'. Traders update inventory via a WhatsApp Bot. This frontend is purely a display layer that must handle dynamic data changes (like rapid stock updates) gracefully."
+  },
+  "agent_role": {
+    "role": "Senior Frontend Engineer & UX Designer",
+    "style": "Modern, Gen-Z appeal, High Performance",
+    "tech_stack": [
+      "React (Vite)",
+      "Tailwind CSS",
+      "Framer Motion (for smooth swipe animations)",
+      "Lucide React (for icons)"
+    ]
+  },
+  "design_specifications": {
+    "layout_mode": "Mobile-First (Vertical Viewport)",
+    "desktop_behavior": "Emulator Mode: On large screens, center the app in a mobile-sized container (max-width: 430px) with a blurred or dark backdrop. Do not stretch to full width.",
+    "scroll_behavior": "Mandatory CSS Scroll Snap (y-mandatory). The user must snap to one product at a time, exactly like TikTok or Instagram Reels.",
+    "visual_hierarchy": {
+      "background": "Full-screen product image (object-cover) taking up 100vh.",
+      "overlay_ui": "All text and buttons must float on top of the image at the bottom. Use CSS linear-gradient (transparent to black) at the bottom to ensure text readability."
+    }
+  },
+  "component_requirements": {
+    "ProductCard": {
+      "elements": [
+        "Product Name (Bold, White Text)",
+        "Price Tag (High visibility, formatted in Naira e.g., ₦15,000)",
+        "Stock Indicator (CRITICAL: Needs to show 'Low Stock' or 'Sold Out' prominently, as this is updated frequently by the bot)",
+        "Description (Truncated with '...more' expander)"
+      ],
+      "actions": [
+        "Buy Now Button (Primary CTA)",
+        "Share Button (Native Web Share API)",
+        "Direct WhatsApp Button (Link to chat with trader)"
+      ]
+    },
+    "FeedContainer": {
+      "logic": "Map through an array of products. Handle loading states gracefully (skeleton screens)."
+    }
+  },
+  "data_simulation_logic": {
+    "instruction": "Create a mock data file that mirrors the structure expected from the WhatsApp Bot backend (Supabase).",
+    "schema_example": {
+      "id": "prod_123",
+      "trader_id": "user_456",
+      "name": "Nike Air Max",
+      "price": 45000,
+      "description": "Barely used, size 42. Original box included.",
+      "image_url": "https://source.unsplash.com/...",
+      "stock_quantity": 2,
+      "is_active": true
+    }
+  },
+  "user_experience_considerations": {
+    "realtime_readiness": "Since the trader updates stock via WhatsApp, the UI must be ready for 'Realtime' state changes. If stock_quantity drops to 0, the 'Buy' button must instantly disable and show 'Sold Out' without a page refresh."
+  }
+}
