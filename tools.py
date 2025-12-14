@@ -35,6 +35,10 @@ def create_product(
     
     supabase = get_supabase()
     
+    # Image is now required - validated in agent before calling this function
+    if not image:
+        return {"success": False, "error": "Product image is required. Please send a photo of your product."}
+    
     product_data = {
         "trader_id": trader_id,
         "trader_name": trader_name,
@@ -44,7 +48,7 @@ def create_product(
         "category": category,
         "stock_quantity": stock,
         "description": description or f"Great {name} available now!",
-        "image_url": image or "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500",
+        "image_url": image,
         "is_active": is_active
     }
     

@@ -147,12 +147,20 @@ def execute_action(state: AgentState) -> AgentState:
     result_msg = ""
     
     if action == "create_product":
+        # Check if image is provided - REQUIRE image for product creation
+        if not state["image_url"]:
+            result_msg = "📸 Please send a photo of your product! I need an image to create the listing.\n\nJust send the photo and I'll add it to your product."
+            # Keep the collected data so we can use it when image arrives
+            new_state = state.copy()
+            new_state["messages"] = state["messages"] + [{"role": "assistant", "content": result_msg}]
+            # Don't clear pending_action or collected_data - we're waiting for image
+            return new_state
+        
         # Add trader info and image
         data["trader_id"] = state["trader_id"]
         data["trader_name"] = state["trader_name"]
         data["whatsapp_number"] = state["whatsapp_number"]
-        if state["image_url"]:
-            data["image"] = state["image_url"]
+        data["image"] = state["image_url"]
         result = create_product(**data)
         if result["success"]:
             result_msg = f"✅ Product added! Your {data.get('name', 'item')} is now listed. (ID: {result['product_id']})"
