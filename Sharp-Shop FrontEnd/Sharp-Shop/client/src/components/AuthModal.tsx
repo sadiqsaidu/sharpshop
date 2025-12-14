@@ -71,6 +71,21 @@ export function AuthModal({ isOpen, onClose, defaultMode = "login" }: AuthModalP
 
     setIsLoading(true);
     try {
+      // Normalize WhatsApp number to international format
+      let normalizedWhatsApp = signupData.whatsappNumber;
+      if (role === "seller" && normalizedWhatsApp) {
+        // Remove spaces and dashes
+        normalizedWhatsApp = normalizedWhatsApp.replace(/[\s-]/g, "");
+        // If starts with 0, replace with +234 (Nigeria)
+        if (normalizedWhatsApp.startsWith("0")) {
+          normalizedWhatsApp = "+234" + normalizedWhatsApp.slice(1);
+        }
+        // Ensure it starts with +
+        if (!normalizedWhatsApp.startsWith("+")) {
+          normalizedWhatsApp = "+" + normalizedWhatsApp;
+        }
+      }
+
       await register({
         username: role === "seller" ? signupData.businessName : signupData.username,
         email: signupData.email || undefined,
@@ -78,7 +93,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = "login" }: AuthModalP
         role,
         fullName: signupData.fullName || undefined,
         businessName: role === "seller" ? signupData.businessName : undefined,
-        whatsappNumber: role === "seller" ? signupData.whatsappNumber : undefined,
+        whatsappNumber: role === "seller" ? normalizedWhatsApp : undefined,
         address: role === "seller" ? signupData.address : undefined,
       });
       toast({

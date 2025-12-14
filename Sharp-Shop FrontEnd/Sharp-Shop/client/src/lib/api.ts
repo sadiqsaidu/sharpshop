@@ -1,5 +1,5 @@
-// API configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://sharpshop-api-10a2006ad1b4.herokuapp.com';
+// API configuration - use empty string for relative paths since Express serves both frontend and API
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 export const apiClient = {
   async fetch(endpoint: string, options?: RequestInit) {

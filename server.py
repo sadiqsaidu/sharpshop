@@ -59,6 +59,19 @@ async def whatsapp_webhook(request: Request):
     
     logging.info(f"Received message from {sender_id}: {incoming_msg}")
     
+    # Extract WhatsApp number without 'whatsapp:' prefix
+    whatsapp_number = sender_id.replace('whatsapp:', '')
+    
+    # Check if this is a registered seller
+    trader = get_or_create_trader(whatsapp_number, "")
+    
+    if trader is None:
+        # Not a registered seller - send rejection message
+        logging.warning(f"❌ Unregistered WhatsApp number attempted to upload: {whatsapp_number}")
+        resp = MessagingResponse()
+        resp.message("⚠️ Sorry, this WhatsApp number is not registered as a seller on SharpShop.\n\nTo upload products, please register as a seller at https://sharpshop.app first using this same WhatsApp number.")
+        return Response(content=str(resp), media_type="application/xml")
+    
     # Process images - download from Twilio and upload to Supabase
     permanent_image_urls = []
     if twilio_image_urls:
@@ -66,11 +79,6 @@ async def whatsapp_webhook(request: Request):
         permanent_image_urls = process_images(twilio_image_urls)
         logging.info(f"Uploaded {len(permanent_image_urls)} images to Supabase")
 
-    # Get or create trader in database
-    # Extract WhatsApp number without 'whatsapp:' prefix
-    whatsapp_number = sender_id.replace('whatsapp:', '')
-    trader = get_or_create_trader(whatsapp_number, "WhatsApp Seller")
-    
     # Get or create user state
     if sender_id not in user_sessions:
         user_sessions[sender_id] = create_initial_state(whatsapp_number, trader["business_name"])

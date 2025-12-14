@@ -140,7 +140,7 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
       </div>
 
-      <div className="relative z-10 p-6 pb-8 space-y-4">
+      <div className="relative z-10 p-6 pb-20 md:pb-8 space-y-4">
         <div className="flex items-center gap-2 flex-wrap">
           
           <Link href={`/trader/${product.traderId}`}>

@@ -195,12 +195,15 @@ export class SupabaseStorage implements IStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
+    console.log('Looking up user:', username);
     // Try finding by username first
     let { data, error } = await supabase
       .from('users')
       .select('*')
       .eq('username', username)
       .maybeSingle();
+    
+    console.log('Username query result:', { hasData: !!data, error });
     
     // If not found by username, try finding by email
     if (!data && !error) {
@@ -212,6 +215,7 @@ export class SupabaseStorage implements IStorage {
       
       data = emailResult.data;
       error = emailResult.error;
+      console.log('Email query result:', { hasData: !!data, error });
     }
     
     if (error) {
@@ -660,6 +664,11 @@ export class MemStorage implements IStorage {
 }
 
 // Use Supabase storage if credentials are available, otherwise use in-memory storage
-const USE_SUPABASE = process.env.VITE_SUPABASE_URL && process.env.VITE_SUPABASE_ANON_KEY;
+const USE_SUPABASE = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL) && (process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY);
+
+console.log('Storage backend:', USE_SUPABASE ? 'Supabase' : 'In-Memory');
+if (USE_SUPABASE) {
+  console.log('Supabase URL:', process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL);
+}
 
 export const storage: IStorage = USE_SUPABASE ? new SupabaseStorage() : new MemStorage();
