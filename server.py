@@ -21,14 +21,18 @@ app = FastAPI()
 
 # CORS Configuration for production
 frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5000")
+allowed_origins = [
+    frontend_url,
+    "https://sharpshop.app",
+    "https://www.sharpshop.app",
+    "http://localhost:5000"
+]
+
+# Allow all Vercel preview deployments
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        frontend_url,
-        "https://sharpshop.app",
-        "https://www.sharpshop.app",
-        "http://localhost:5000"
-    ],
+    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
