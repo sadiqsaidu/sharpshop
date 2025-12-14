@@ -139,10 +139,13 @@ export default function Home() {
     refetch,
   } = useQuery<Product[]>({
     queryKey: ["/api/products"],
+    refetchInterval: 5000, // Poll every 5 seconds as fallback
   });
 
   // Set up real-time subscription for products
   useEffect(() => {
+    console.log('Setting up real-time subscription for products...');
+    
     const channel = supabase
       .channel('products-changes')
       .on(
@@ -152,12 +155,15 @@ export default function Home() {
           schema: 'public',
           table: 'products'
         },
-        () => {
+        (payload) => {
+          console.log('Real-time update received:', payload);
           // Invalidate and refetch products when any change occurs
           queryClient.invalidateQueries({ queryKey: ['/api/products'] });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);

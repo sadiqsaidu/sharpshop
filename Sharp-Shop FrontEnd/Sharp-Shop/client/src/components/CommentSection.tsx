@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Heart, Send, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
 
 interface Comment {
   id: string;
@@ -62,6 +63,29 @@ export function CommentSection({ children, trigger, productId }: CommentSectionP
   
   const userId = user?.id || getGuestId();
   const userName = user?.username || getGuestName();
+
+  // Set up real-time subscription for comments on this product
+  useEffect(() => {
+    const channel = supabase
+      .channel(`comments-${productId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'comments',
+          filter: `product_id=eq.${productId}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['comments', productId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [productId, queryClient]);
 
   // Fetch comments from API
   const { data: comments = [], isLoading } = useQuery({

@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
 
 // Generate a consistent guest ID from localStorage
 const getGuestId = () => {
@@ -15,6 +17,29 @@ export function useLikes(productId: string) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const userId = user?.id ? String(user.id) : getGuestId();
+
+  // Set up real-time subscription for likes on this product
+  useEffect(() => {
+    const channel = supabase
+      .channel(`likes-${productId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'likes',
+          filter: `product_id=eq.${productId}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['likes', productId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [productId, queryClient]);
 
   // Fetch like count and user's like status
   const { data: likesData } = useQuery({

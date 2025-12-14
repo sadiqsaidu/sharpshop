@@ -6,6 +6,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { useToast } from "../hooks/use-toast";
+import { WhatsAppConnect } from "./WhatsAppConnect";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -17,6 +18,8 @@ export function AuthModal({ isOpen, onClose, defaultMode = "login" }: AuthModalP
   const [mode, setMode] = useState<"login" | "signup">(defaultMode);
   const [role, setRole] = useState<"buyer" | "seller">("buyer");
   const [isLoading, setIsLoading] = useState(false);
+  const [showWhatsAppConnect, setShowWhatsAppConnect] = useState(false);
+  const [registeredBusinessName, setRegisteredBusinessName] = useState("");
   const { login, register } = useAuth();
   const { toast } = useToast();
 
@@ -96,11 +99,18 @@ export function AuthModal({ isOpen, onClose, defaultMode = "login" }: AuthModalP
         whatsappNumber: role === "seller" ? normalizedWhatsApp : undefined,
         address: role === "seller" ? signupData.address : undefined,
       });
-      toast({
-        title: "Account created!",
-        description: `Welcome to SharpShop${role === "seller" ? ", seller!" : "!"}`,
-      });
-      onClose();
+      
+      // For sellers, show WhatsApp connect modal
+      if (role === "seller") {
+        setRegisteredBusinessName(signupData.businessName);
+        setShowWhatsAppConnect(true);
+      } else {
+        toast({
+          title: "Account created!",
+          description: "Welcome to SharpShop!",
+        });
+        onClose();
+      }
     } catch (error: any) {
       toast({
         title: "Signup failed",
@@ -386,6 +396,16 @@ export function AuthModal({ isOpen, onClose, defaultMode = "login" }: AuthModalP
           </motion.div>
         </>
       )}
+
+      {/* WhatsApp Connect Modal for Sellers */}
+      <WhatsAppConnect
+        isOpen={showWhatsAppConnect}
+        onClose={() => {
+          setShowWhatsAppConnect(false);
+          onClose();
+        }}
+        businessName={registeredBusinessName}
+      />
     </AnimatePresence>
   );
 }
