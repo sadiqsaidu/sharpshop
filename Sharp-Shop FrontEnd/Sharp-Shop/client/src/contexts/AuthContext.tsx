@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User } from "@shared/schema";
+import { apiClient } from "@/lib/api";
 
 interface AuthContextType {
   user: User | null;
@@ -32,9 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = async () => {
     try {
-      const response = await fetch("/api/user", {
-        credentials: "include",
-      });
+      const response = await apiClient.fetch("/api/user");
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
@@ -47,11 +46,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const login = async (username: string, password: string) => {
-    const response = await fetch("/api/login", {
+    const response = await apiClient.fetch("/api/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
-      credentials: "include",
     });
 
     if (!response.ok) {
@@ -63,11 +61,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const register = async (data: RegisterData) => {
-    const response = await fetch("/api/register", {
+    const response = await apiClient.fetch("/api/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
-      credentials: "include",
     });
 
     if (!response.ok) {
@@ -80,9 +77,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    await fetch("/api/logout", {
+    await apiClient.fetch("/api/logout", {
       method: "POST",
-      credentials: "include",
     });
     setUser(null);
   };
