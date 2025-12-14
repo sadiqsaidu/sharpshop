@@ -1,11 +1,13 @@
 """FastAPI server for WhatsApp chatbot."""
 from fastapi import FastAPI, Form, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
 from twilio.twiml.messaging_response import MessagingResponse
 from agent import create_initial_state, chat
 from database import get_or_create_trader
 from storage import process_images
 import uvicorn
 import logging
+import os
 
 # Configure logging
 logging.basicConfig(
@@ -16,6 +18,21 @@ logging.basicConfig(
 )
 
 app = FastAPI()
+
+# CORS Configuration for production
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5000")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        frontend_url,
+        "https://sharpshop.app",
+        "https://www.sharpshop.app",
+        "http://localhost:5000"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # In-memory session store
 user_sessions = {}
