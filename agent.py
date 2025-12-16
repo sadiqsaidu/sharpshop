@@ -17,20 +17,94 @@ from tools import create_product, query_inventory, update_product, list_products
 REQUIRED_FIELDS = ["name", "price", "category", "stock"]
 OPTIONAL_FIELDS = ["description", "image"]
 
-SYSTEM_PROMPT = f"""You are a helpful WhatsApp assistant for sellers managing their inventory. You help them add products, query stock, and update listings.
 
-When a seller wants to add a product, extract these details from their messages:
-- name (required): product name
-- price (required): in Naira, must be > 0
-- category (required): one of {', '.join(ALLOWED_CATEGORIES)}
-- stock (required): stock count, must be >= 0
-- description (optional but recommended): product description
+def normalize_naira_price(value) -> int | None:
+    """Normalize common Nigerian WhatsApp price formats into integer Naira.
 
-**IMPORTANT**: 
-- If the seller sends an image with product details, you SHOULD ask for a description to make the listing more attractive
-- Example: "Great! I can see you have [product name] for ₦[price]. Can you tell me a bit more about it? What's special about this item?"
-- If they already provided a description or context in their message, you can proceed without asking
-- Once you have name, price, category, stock (and ideally description), output the JSON action
+    Examples:
+    - "5k", "5 K" -> 5000
+    - "₦12k" -> 12000
+    - "250" (no currency, < 1000) -> 250000
+    - "15000" -> 15000
+    """
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        n = int(value)
+        return n if n > 0 else None
+
+    s = str(value).strip().lower()
+    s = s.replace("₦", "").replace(",", "").strip()
+
+    # 5k / 5.5k / 5 k
+    m = re.fullmatch(r"(\d+(?:\.\d+)?)\s*k", s)
+    if m:
+        return max(1, int(float(m.group(1)) * 1000))
+
+    # plain number
+    m = re.fullmatch(r"\d+(?:\.\d+)?", s)
+    if m:
+        n = int(float(s))
+        if n <= 0:
+            return None
+        # Common Naija shorthand: "250" means 250k
+        return n * 1000 if n < 1000 else n
+
+    return None
+
+SYSTEM_PROMPT = f"""You are a helpful WhatsApp assistant for Nigerian sellers managing their shop inventory.
+Your job: understand casual Nigerian English / pidgin and turn it into ONE correct JSON action.
+
+Understand informal patterns (examples):
+- "this shoe na 5k" == the item costs 5000 Naira
+- "I get 10 for hand" == stock is 10
+- "condition good / e clean / like new" == good condition (use in description)
+- Typos/short forms: "iphne", "adiddas", "sneekers", "wif", "gud" etc.
+
+Be smart and avoid repeated questions:
+- Infer missing info from context/history whenever possible.
+- Only ask a follow-up question if you truly cannot create a valid listing.
+- Default non-critical fields to reasonable values.
+
+## Fields (be flexible)
+- name: REQUIRED (can infer from message + image context). If unclear, use a short best-guess like "Adidas sneakers".
+- price: REQUIRED. Extract and convert to an integer Naira amount.
+  Price formats:
+  - "5k", "5 K", "5,5k" => 5000 (k means thousand)
+  - "₦12k" => 12000
+  - If the seller sends just a number with no currency (common Nigerian style):
+     - If it's < 1000 (e.g., "250"), treat it as thousands => 250000
+     - If it's >= 1000 (e.g., "15000"), use it as-is
+- category: NOT strictly required to ask for. Infer from product name using common sense.
+  Use one of these categories only: {', '.join(ALLOWED_CATEGORIES)}
+  Examples of category inference:
+  - Adidas/Nike/sneakers/shoe/slippers/sandals/heel/boot => Footwear
+  - iPhone/Samsung/Infinix/phone/earpods/airpods/charger/powerbank => Electronics
+  - wig/hair/cream/perfume/makeup/lipstick => Beauty
+  - jeans/shirt/top/bag/watch => Fashion
+  If unsure, pick the closest reasonable category.
+- stock: If not mentioned, default to 1. If seller says "available" assume 1.
+  Understand: "I get 10", "10pcs", "10 dey", "10 for hand".
+- description: If not provided, generate a short simple one from context.
+  Include condition words if mentioned (e.g., "Condition: good" / "Clean"), and basic selling points.
+
+## Actions
+When a seller wants to add a product, extract what you can and output create_product.
+When they want to search/ask for stock, output query_inventory.
+When they want to list all products, output list_products.
+When they want to update something, output update_product.
+
+## Examples (casual input -> interpretation)
+1) "this shoe na 5k, I get 10 for hand, condition good"
+    -> name: "Shoe" (or "Sneakers"), price: 5000, stock: 10, description includes "condition good", category: Footwear
+2) "Adidas black size 42 15k"
+    -> name: "Adidas black shoe (size 42)", price: 15000, category: Footwear
+3) "iphone 11 250, clean" (no currency)
+    -> price: 250000, name: "iPhone 11", category: Electronics, description: "Clean, good condition"
+4) "how many Nike remain" / "check Nike for me"
+    -> query_inventory search_term: "Nike"
+5) "increase adidas price to 18k"
+    -> update_product product_name: "adidas", updates.price: 18000
 
 Output format (respond with ONLY the JSON, nothing else):
 ```json
@@ -48,12 +122,11 @@ For listing all products:
 ```
 
 For updating a product (price, stock, etc.):
-- First, you need to find the product by searching for it
-- Then use the product name to update it
 ```json
 {{"action": "update_product", "data": {{"product_name": "esp32 microcontroller", "updates": {{"price": 11000}}}}}}
 ```
-Note: You can update: price, stock_quantity, description, name, category, is_active"""
+Note: You can update: price, stock_quantity, description, name, category, is_active.
+"""
 
 
 class AgentState(TypedDict):
