@@ -25,13 +25,12 @@ allowed_origins = [
     frontend_url,
     "https://sharpshop.app",
     "https://www.sharpshop.app",
+    "https://sharpshop-frontend-011b1462cb27.herokuapp.com",
     "http://localhost:5000"
 ]
 
-# Allow all Vercel preview deployments
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
