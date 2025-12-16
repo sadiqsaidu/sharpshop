@@ -3,7 +3,7 @@ from fastapi import FastAPI, Form, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from twilio.twiml.messaging_response import MessagingResponse
 from agent import create_initial_state, chat
-from database import get_or_create_trader
+from database import get_trader_by_whatsapp
 from storage import process_images
 import uvicorn
 import logging
@@ -62,7 +62,7 @@ async def whatsapp_webhook(request: Request):
     whatsapp_number = sender_id.replace('whatsapp:', '')
     
     # Check if this is a registered seller
-    trader = get_or_create_trader(whatsapp_number, "")
+    trader = get_trader_by_whatsapp(whatsapp_number)
     
     if trader is None:
         # Not a registered seller - send rejection message

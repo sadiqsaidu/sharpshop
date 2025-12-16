@@ -9,7 +9,7 @@ load_dotenv()
 from typing import TypedDict, Literal
 from langgraph.graph import StateGraph, END
 from openai import OpenAI
-from database import get_or_create_trader
+from database import get_trader_by_whatsapp
 
 from config import GROQ_API_KEY, GROQ_BASE_URL, MODEL_NAME, ALLOWED_CATEGORIES
 from tools import create_product, query_inventory, update_product, list_products
@@ -241,8 +241,10 @@ def build_graph() -> StateGraph:
 
 
 def create_initial_state(whatsapp_number: str, business_name: str = "My Shop") -> AgentState:
-    """Create initial state for a new conversation - auto-creates trader."""
-    trader = get_or_create_trader(whatsapp_number, business_name)
+    """Create initial state for a new conversation."""
+    trader = get_trader_by_whatsapp(whatsapp_number)
+    if not trader:
+        raise ValueError(f"No registered trader found for {whatsapp_number}")
     return {
         "messages": [],
         "trader_id": trader["id"],

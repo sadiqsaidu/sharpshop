@@ -56,9 +56,3 @@ def get_trader_by_whatsapp(whatsapp_number: str) -> Optional[dict]:
     
     print(f"❌ No registered seller found for WhatsApp: {normalized_number}")
     return None
-
-
-# Keep old function name for backward compatibility but redirect to new function
-def get_or_create_trader(whatsapp_number: str, business_name: str = "New Seller") -> Optional[dict]:
-    """Deprecated: Use get_trader_by_whatsapp instead. Now only returns existing traders."""
-    return get_trader_by_whatsapp(whatsapp_number)
