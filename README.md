@@ -57,17 +57,12 @@ Welcome to **SharpShop** — a headless e-commerce platform where Nigerian trade
 3. Saves to Supabase database
 4. Product appears **instantly** in the React storefront
 
-### For Customers (via Web):
-1. Browse products in TikTok-style feed
-2. Click **"Buy Now"** on any product
-3. Redirected to seller's WhatsApp with pre-filled message
-4. Complete purchase through WhatsApp chat
-
-### For Customers (via Chat):
-1. Ask "Do you have wired mouse?" or "Show me cheap sneakers"
-2. AI checks real-time stock and shows results
-3. Say "I'll take it" -> AI generates a secure **Flutterwave payment link**
-4. Pay online -> Seller gets notified via WhatsApp automatically
+### For Customers:
+1. Browse products in the TikTok-style feed or chat with the AI
+2. Ask questions like "Do you have wired mouse?" or "Show me cheap sneakers"
+3. AI checks real-time stock and shows results
+4. Say "I'll take it" -> AI generates a secure **Flutterwave payment link** directly in chat
+5. Pay online -> Seller gets notified via WhatsApp automatically
 
 ## Project Structure
 ```
