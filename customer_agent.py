@@ -193,19 +193,23 @@ def execute_tools(state: CustomerAgentState) -> CustomerAgentState:
                  enhanced_message = "Here is what I found:\n"
                  
                  for p in top_results:
-                      # Check availability first
-                      stock_res = check_product_availability(p["id"], trader_id)
-                      if stock_res.get("available"):
-                           # Create Order
-                           order_res = create_order(trader_id, p["id"], "pending", {})
-                           if "id" in order_res:
-                                link = create_payment_link(order_res["id"])
-                                # Append to product info for display
-                                p["payment_link"] = link
-                                p["order_id"] = order_res["id"]
-                                enhanced_message += f"\n- **{p['name']}**\n  Price: {p['price']} | Stock: {p['stock_quantity']}\n  [Buy Now]({link})\n"
-                      else:
-                           enhanced_message += f"\n- **{p['name']}** (Out of Stock)\n"
+                      try:
+                          # Check availability first
+                          stock_res = check_product_availability(p["id"], trader_id)
+                          if stock_res.get("available"):
+                               # Create Order
+                               order_res = create_order(trader_id, p["id"], "delivery", {})
+                               if "id" in order_res:
+                                    link = create_payment_link(order_res["id"])
+                                    # Append to product info for display
+                                    p["payment_link"] = link
+                                    p["order_id"] = order_res["id"]
+                                    enhanced_message += f"\n- **{p['name']}**\n  Price: {p['price']} | Stock: {p['stock_quantity']}\n  [Buy Now]({link})\n"
+                          else:
+                               enhanced_message += f"\n- **{p['name']}** (Out of Stock)\n"
+                      except Exception as inner_e:
+                          print(f"[customer_agent] ERROR processing product {p.get('id')}: {inner_e}")
+                          enhanced_message += f"\n- **{p['name']}**\n  Price: {p['price']}\n"
                  
                  # If only one result, we also update state vars for context
                  if len(top_results) == 1:
@@ -243,7 +247,7 @@ def execute_tools(state: CustomerAgentState) -> CustomerAgentState:
                      order_res = create_order(
                         trader_id, 
                         p_id, 
-                        "pending", # No fulfillment type yet
+                        "delivery", # Default to delivery
                         {}
                      )
                      if "id" in order_res:
