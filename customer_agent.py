@@ -99,14 +99,17 @@ def process_message(state: CustomerAgentState) -> CustomerAgentState:
     # Format categories for prompt inputs if needed, 
     # but mainly we need to pass current state vars
     
+    # IMPORTANT: The decision model needs some history; sending only the last user
+    # message makes it default to tool=null too often.
+    history = state.get("messages", [])[-8:]
     messages = [
         {"role": "system", "content": STATE_SYSTEM_PROMPT.format(
             status=current_status,
             product_id=state.get("product_id"),
             order_id=state.get("order_id")
-        )},
-        {"role": "user", "content": state["messages"][-1]["content"]}
+        )}
     ]
+    messages.extend(history)
     
     try:
         response = client.chat.completions.create(
@@ -123,6 +126,21 @@ def process_message(state: CustomerAgentState) -> CustomerAgentState:
     try:
         decision = json.loads(response.choices[0].message.content)
         state["context"]["decision"] = decision
+
+        # Lightweight debug logging (helps trace tool selection issues)
+        try:
+            print(
+                "[customer_agent] decision",
+                {
+                    "session_id": state.get("session_id"),
+                    "status": state.get("status"),
+                    "tool": decision.get("tool"),
+                    "args": decision.get("args"),
+                    "next_state": decision.get("next_state"),
+                },
+            )
+        except Exception:
+            pass
         
         # Apply state updates immediately
         if decision.get("next_state"):
@@ -293,6 +311,21 @@ def execute_tools(state: CustomerAgentState) -> CustomerAgentState:
                   state["status"] = "collecting_delivery_details"
     
     state["context"]["tool_result"] = result
+
+    try:
+        print(
+            "[customer_agent] tool_result",
+            {
+                "session_id": state.get("session_id"),
+                "status": state.get("status"),
+                "tool": state.get("context", {}).get("decision", {}).get("tool"),
+                "result_keys": list(result.keys()) if isinstance(result, dict) else type(result).__name__,
+                "total": result.get("total") if isinstance(result, dict) else None,
+                "has_message": bool(result.get("message")) if isinstance(result, dict) else False,
+            },
+        )
+    except Exception:
+        pass
     return state
 
 def synthesize_response(state: CustomerAgentState) -> CustomerAgentState:

@@ -19,7 +19,14 @@ class CustomerAgentState(TypedDict):
     fulfillment_type: Optional[Literal["delivery", "pickup"]]
     delivery_details: Optional[Dict[str, str]]
     payment_link: Optional[str]
-    status: Literal["browsing", "awaiting_fulfillment", "awaiting_payment", "paid", "completed"]
+    status: Literal[
+        "browsing",
+        "awaiting_fulfillment",
+        "awaiting_payment",
+        "collecting_delivery_details",
+        "paid",
+        "completed",
+    ]
 
 class Session(TypedDict):
     session_id: str

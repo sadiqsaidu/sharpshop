@@ -42,6 +42,7 @@ export function ProductChatModal({
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const didAutoSendRef = useRef(false);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -49,18 +50,27 @@ export function ProductChatModal({
     }
   }, [messages]);
 
-  // Reset state when modal opens
+  // When modal opens, optionally suggest a starter question.
+  // Don't reset the session_id; resetting makes the assistant lose context and
+  // can look "unresponsive" (repeating generic welcome) in some flows.
   useEffect(() => {
     if (isOpen) {
-      setMessages([]);
-      setSessionId(null);
-      setProducts([]);
-      // Auto-send initial message about the product if provided
-      if (productName) {
-        setInputValue(`Tell me about ${productName}`);
-      }
+      didAutoSendRef.current = false;
+      if (productName) setInputValue(`Tell me about ${productName}`);
     }
   }, [isOpen, productName]);
+
+  // Auto-send once per open (if productName is provided and there are no messages yet)
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!productName) return;
+    if (didAutoSendRef.current) return;
+    if (messages.length > 0) return;
+    if (!inputValue.trim()) return;
+    didAutoSendRef.current = true;
+    handleSend();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   const handleSend = async () => {
     if (!inputValue.trim()) return;
