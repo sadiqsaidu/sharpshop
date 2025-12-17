@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, Share2, Plus } from "lucide-react";
-import { SiWhatsapp } from "react-icons/si";
+import { ShoppingBag, Share2, MessageCircle } from "lucide-react";
 
 interface ActionButtonsProps {
   productName: string;
@@ -8,16 +7,16 @@ interface ActionButtonsProps {
   whatsappNumber?: string | null;
   isSoldOut: boolean;
   onBuyClick: () => void;
+  onChatClick?: () => void;
   userRole?: string | null;
 }
 
 export function ActionButtons({
   productName,
   productUrl,
-  whatsappNumber,
   isSoldOut,
   onBuyClick,
-  userRole,
+  onChatClick,
 }: ActionButtonsProps) {
   const handleShare = async () => {
     const shareData = {
@@ -37,23 +36,6 @@ export function ActionButtons({
     }
   };
 
-  const handleWhatsApp = () => {
-    if (userRole === "seller") {
-      // Sellers upload products
-      window.open(
-        "https://wa.me/14155238886?text=Hi,%20I%20want%20to%20add%20a%20product",
-        "_blank"
-      );
-    } else {
-      // Buyers contact seller
-      const phoneNumber = whatsappNumber || "2348174930608";
-      const message = encodeURIComponent(
-        `Hello! I saw this product on SharpShop and I'm interested: *${productName}*. Is it still available?`
-      );
-      window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank");
-    }
-  };
-
   return (
     <div className="flex items-center gap-3 w-full">
       <Button
@@ -67,6 +49,19 @@ export function ActionButtons({
         {isSoldOut ? "Sold Out" : "Buy Now"}
       </Button>
 
+      {/* Chat with AI Assistant */}
+      {onChatClick && (
+        <Button
+          data-testid="button-chat"
+          onClick={onChatClick}
+          size="icon"
+          variant="ghost"
+          className="h-12 w-12 bg-black/90 hover:bg-neutral-900 backdrop-blur-md border border-white/20 text-white"
+        >
+          <MessageCircle className="w-5 h-5" />
+        </Button>
+      )}
+
       <Button
         data-testid="button-share"
         onClick={handleShare}
@@ -76,19 +71,6 @@ export function ActionButtons({
       >
         <Share2 className="w-5 h-5" />
       </Button>
-
-      {userRole === "seller" && (
-        <Button
-          data-testid="button-whatsapp"
-          onClick={handleWhatsApp}
-          size="icon"
-          variant="ghost"
-          className="h-12 w-12 bg-emerald-500/80 backdrop-blur-md border border-emerald-400/50 text-white relative"
-        >
-          <SiWhatsapp className="w-5 h-5" />
-          <Plus className="w-3 h-3 absolute -top-0.5 -right-0.5 bg-emerald-700 rounded-full p-0.5" />
-        </Button>
-      )}
     </div>
   );
 }

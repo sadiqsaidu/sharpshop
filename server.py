@@ -236,5 +236,61 @@ async def get_shop_preview(trader_id: str):
         "products": products
     }
 
+# --- Direct Checkout API ---
+class CheckoutRequest(BaseModel):
+    trader_id: str
+    product_id: str
+    fulfillment_type: str = "delivery"
+    customer_email: str = "customer@sharpshop.app"
+    customer_phone: str = "08000000000"
+    customer_name: str = "SharpShop Customer"
+
+class CheckoutResponse(BaseModel):
+    order_id: str
+    tx_ref: str
+    amount: float
+    currency: str
+    public_key: str
+    product_name: str
+    customer_email: str
+    customer_phone: str
+    customer_name: str
+    redirect_url: str
+
+@app.post("/api/checkout", response_model=CheckoutResponse)
+async def create_checkout(request: CheckoutRequest):
+    """Create an order and return Flutterwave inline checkout config."""
+    from customer_tools import create_order, get_product_details
+    from customer_config import FLUTTERWAVE_PUBLIC_KEY
+    
+    # Get product details for amount
+    product = await run_in_threadpool(get_product_details, request.trader_id, request.product_id)
+    if not product:
+        return Response(content="Product not found", status_code=404)
+    
+    # Create order in database
+    order = await run_in_threadpool(
+        create_order, 
+        request.trader_id, 
+        request.product_id, 
+        request.fulfillment_type,
+        {}  # Empty delivery details for now
+    )
+    
+    tx_ref = f"sharpshop_{order['id']}"
+    
+    return CheckoutResponse(
+        order_id=str(order["id"]),
+        tx_ref=tx_ref,
+        amount=float(product["price"]),
+        currency="NGN",
+        public_key=FLUTTERWAVE_PUBLIC_KEY,
+        product_name=product["name"],
+        customer_email=request.customer_email,
+        customer_phone=request.customer_phone,
+        customer_name=request.customer_name,
+        redirect_url=f"https://sharpshop.app/pay/callback?order_id={order['id']}"
+    )
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

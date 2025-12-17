@@ -162,8 +162,8 @@ export default function TraderProfile() {
             <div className="pb-2 flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-bold text-white truncate">{traderName}</h1>
-                <div className="bg-yellow-500 rounded-full p-0.5">
-                  <Star className="w-3 h-3 fill-black text-black" />
+                <div className="bg-emerald-500 rounded-full p-0.5">
+                  <Star className="w-3 h-3 fill-white text-white" />
                 </div>
               </div>
               <p className="text-xs text-white/60 line-clamp-1">
@@ -183,7 +183,7 @@ export default function TraderProfile() {
                 WhatsApp
               </Button>
             )}
-            <Button className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-black font-bold rounded-full h-10 text-base">
+            <Button className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-full h-10 text-base">
               <UserPlus className="w-5 h-5 mr-2" />
               Follow
             </Button>
@@ -269,13 +269,13 @@ export default function TraderProfile() {
             <TabsList className="w-full bg-transparent border-b border-white/10 p-0 h-auto rounded-none shrink-0">
               <TabsTrigger
                 value="stories"
-                className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-yellow-400 data-[state=active]:bg-transparent data-[state=active]:text-yellow-400 text-white/60 pb-3 font-bold text-sm uppercase tracking-wide"
+                className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-500 data-[state=active]:bg-transparent data-[state=active]:text-emerald-500 text-white/60 pb-3 font-bold text-sm uppercase tracking-wide"
               >
                 Products
               </TabsTrigger>
               <TabsTrigger
                 value="spotlight"
-                className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-yellow-400 data-[state=active]:bg-transparent data-[state=active]:text-yellow-400 text-white/60 pb-3 font-bold text-sm uppercase tracking-wide"
+                className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-500 data-[state=active]:bg-transparent data-[state=active]:text-emerald-500 text-white/60 pb-3 font-bold text-sm uppercase tracking-wide"
               >
                 Spotlight
               </TabsTrigger>

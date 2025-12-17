@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ChevronUp, Heart, MessageCircle } from "lucide-react";
+import { ChevronDown, ChevronUp, Heart, MessageCircle, Plus } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { type Product } from "@shared/schema";
 import { StockIndicator } from "./StockIndicator";
@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CommentSection } from "./CommentSection";
+import { SiWhatsapp } from "react-icons/si";
+import { ProductChatModal } from "./ProductChatModal";
 
 interface ProductCardProps {
   product: Product;
@@ -35,6 +37,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const [showFullText, setShowFullText] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const { toast } = useToast();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { likeCount, isLiked, toggleLike } = useLikes(product.id);
@@ -43,13 +46,80 @@ export function ProductCard({ product }: ProductCardProps) {
   const isSoldOut = product.stockQuantity === 0;
   const isProductFavorite = isFavorite(product.id);
 
-  const handleBuyClick = () => {
-    // Format WhatsApp message
-    const message = `Hi, I'm interested in *${product.name}* - ${formatPrice(product.price)}`;
-    const whatsappUrl = `https://wa.me/${product.whatsappNumber?.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
+  const handleBuyClick = async () => {
+    const API_BASE = import.meta.env.VITE_CHAT_API_URL || "http://localhost:8000";
     
-    // Open WhatsApp in new tab
-    window.open(whatsappUrl, '_blank');
+    try {
+      // Show loading toast
+      toast({
+        title: "Processing...",
+        description: "Setting up payment",
+      });
+
+      // Create order and get checkout config
+      const response = await fetch(`${API_BASE}/api/checkout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          trader_id: product.traderId,
+          product_id: product.id,
+          customer_email: user?.email || "customer@sharpshop.app",
+          customer_name: user?.fullName || user?.username || "SharpShop Customer",
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create order");
+      }
+
+      const data = await response.json();
+      
+      // Open Flutterwave inline modal
+      // @ts-ignore - FlutterwaveCheckout is loaded via script tag
+      if (window.FlutterwaveCheckout) {
+        // @ts-ignore
+        window.FlutterwaveCheckout({
+          public_key: data.public_key,
+          tx_ref: data.tx_ref,
+          amount: data.amount,
+          currency: data.currency,
+          payment_options: "card, banktransfer, ussd",
+          customer: {
+            email: data.customer_email,
+            phone_number: data.customer_phone,
+            name: data.customer_name,
+          },
+          customizations: {
+            title: "SharpShop",
+            description: `Payment for ${data.product_name}`,
+            logo: window.location.origin + "/favicon.svg",
+          },
+          callback: function(response: { status: string; transaction_id: string }) {
+            console.log("Payment response:", response);
+            if (response.status === "successful") {
+              toast({
+                title: "Payment Successful! 🎉",
+                description: "Your order has been placed.",
+              });
+            }
+          },
+          onclose: function() {
+            console.log("Payment modal closed");
+          },
+        });
+      } else {
+        throw new Error("Payment system not loaded");
+      }
+    } catch (error) {
+      console.error("Checkout error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to open payment. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleLikeToggle = () => {
@@ -102,6 +172,26 @@ export function ProductCard({ product }: ProductCardProps) {
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent pointer-events-none" />
 
       <div className="absolute bottom-56 right-4 z-20 flex flex-col gap-6 items-center">
+        {/* WhatsApp Upload Button for Sellers */}
+        {user?.role === "seller" && (
+          <div className="flex flex-col items-center gap-1">
+            <Button
+              data-testid="button-whatsapp-upload"
+              variant="ghost"
+              onClick={() => window.open("https://wa.me/14155238886?text=Hi,%20I%20want%20to%20add%20a%20product", "_blank")}
+              className="h-auto w-auto hover:bg-transparent p-0 [&_svg]:size-auto relative group"
+            >
+              <div className="relative flex items-center justify-center w-[45px] h-[45px] rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-lg group-hover:scale-110 transition-transform duration-200 border-2 border-white/20">
+                <SiWhatsapp className="!w-[24px] !h-[24px] text-white drop-shadow-md" />
+                <div className="absolute -top-1 -right-1 bg-white text-emerald-600 rounded-full p-0.5 shadow-sm">
+                  <Plus className="w-3 h-3" strokeWidth={3} />
+                </div>
+              </div>
+            </Button>
+            <span className="text-white text-xs drop-shadow-md font-medium">Upload</span>
+          </div>
+        )}
+
         <div className="flex flex-col items-center gap-1">
           <Button
             data-testid={`button-like-${product.id}`}
@@ -140,7 +230,7 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
       </div>
 
-      <div className="relative z-10 p-6 pb-20 md:pb-8 space-y-4">
+      <div className="relative z-10 p-6 pb-20 md:pb-8 space-y-3">
         <div className="flex items-center gap-2 flex-wrap">
           
           <Link href={`/trader/${product.traderId}`}>
@@ -159,21 +249,23 @@ export function ProductCard({ product }: ProductCardProps) {
           </Badge>
         </div>
 
-        <h2
-          data-testid={`text-product-name-${product.id}`}
-          className="text-2xl md:text-3xl font-bold text-white tracking-tight drop-shadow-lg"
-        >
-          {product.name}
-        </h2>
+        <div className="flex flex-col gap-0">
+          <h2
+            data-testid={`text-product-name-${product.id}`}
+            className="text-2xl md:text-3xl font-bold text-white tracking-tight drop-shadow-lg"
+          >
+            {product.name}
+          </h2>
 
-        <p
-          data-testid={`text-product-price-${product.id}`}
-          className="text-3xl md:text-4xl font-extrabold text-white drop-shadow-lg"
-        >
-          {formatPrice(product.price)}
-        </p>
+          <p
+            data-testid={`text-product-price-${product.id}`}
+            className="text-3xl md:text-4xl font-extrabold text-white drop-shadow-lg"
+          >
+            {formatPrice(product.price)}
+          </p>
+        </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 mt-2">
           <StockIndicator quantity={product.stockQuantity} />
         </div>
 
@@ -215,10 +307,20 @@ export function ProductCard({ product }: ProductCardProps) {
             whatsappNumber={product.whatsappNumber}
             isSoldOut={isSoldOut}
             onBuyClick={handleBuyClick}
+            onChatClick={() => setIsChatOpen(true)}
             userRole={user?.role}
           />
         </div>
       </div>
+
+      {/* Chat Modal */}
+      <ProductChatModal
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        traderId={product.traderId}
+        traderName={product.traderName}
+        productName={product.name}
+      />
     </motion.div>
   );
 }
