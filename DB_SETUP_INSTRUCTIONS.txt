@@ -1,0 +1,32 @@
+DATABASE SETUP INSTRUCTIONS
+===========================
+
+To enable the Payment and Fulfillment flow for the Customer Agent, the following database changes are required in Supabase.
+
+Please execute the following SQL script in the Supabase SQL Editor:
+
+```sql
+-- Create orders table if it doesn't exist
+CREATE TABLE IF NOT EXISTS orders (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  trader_id TEXT NOT NULL REFERENCES traders(id),
+  product_id UUID NOT NULL REFERENCES products(id),
+  amount NUMERIC NOT NULL,
+  currency TEXT DEFAULT 'NGN',
+  fulfillment_type TEXT CHECK (fulfillment_type IN ('delivery', 'pickup')),
+  delivery_details JSONB,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'failed', 'fulfilled')),
+  payment_ref TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Enable RLS
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+
+-- create Policies (Adjust as needed for production security)
+CREATE POLICY "Allow public insert on orders" ON orders FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public select on orders" ON orders FOR SELECT USING (true);
+CREATE POLICY "Allow public update on orders" ON orders FOR UPDATE USING (true);
+```
+
+Once this table is created, the Agent will be able to generate orders and payment links successfully.
