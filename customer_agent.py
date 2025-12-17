@@ -22,72 +22,51 @@ from customer_sessions import CustomerAgentState
 def create_client() -> OpenAI:
     return OpenAI(base_url=GROQ_BASE_URL, api_key=GROQ_API_KEY)
 
-# Intent Classification System Prompt
-# State Management System Prompt
-STATE_SYSTEM_PROMPT = """You are the brain of a shopping assistant. Manage the conversation flow based on the current state.
+# Intent Classification System Prompt - Simplified and Example-Driven
+STATE_SYSTEM_PROMPT = """You decide what action to take for a shopping assistant.
 
-Current State: {status}
-Current Product ID: {product_id}
-Current Order ID: {order_id}
+STATE: {status}
+PRODUCT_ID: {product_id}
+ORDER_ID: {order_id}
 
-3. Transitions:
-4. **IMPORTANT**: Only check for search queries if current state is BROWSING.
-5. 1. BROWSING:
-   - User expresses intent to buy a specific product OR just mentions a product keyword (e.g., "wired", "mouse")? -> Output tool="search_shop_products", args={{"query": "keyword"}}.
-   - **CRITICAL**: If the user sends a short message like "wired", "mouse", "solar", ASSUME IT IS A SEARCH QUERY.
-   - **EXCEPTION**: If the user says "hi", "hello", "hey", "good morning", etc. -> Output tool=null (Chit-chat). DO NOT SEARCH "hi".
-   - User asks generic questions? -> Output tool="search_shop_products" (if product related) or null (if pure chitchat).
-2. PRODUCT_SELECTED:
-   - User confirms they want to buy? -> Output next_state="awaiting_payment".
-   - User wants to keep looking? -> Output next_state="browsing".
-3. AWAITING_PAYMENT:
-   - User asks for link again? -> Output tool="create_payment_link".
-   - User says "paid"? -> Output tool="check_order_status".
-   - If payment confirmed (status=paid)? -> Output next_state="collecting_delivery_details".
-4. COLLECTING_DELIVERY_DETAILS:
-   - User says "cancel" or "stop"? -> Output next_state="browsing".
-   - User provides Name, Phone, AND Address (long enough string)? -> Output updates={{"delivery_details": ...}}, next_state="paid".
-   - User provides short/incomplete text (e.g. "df", "hi")? -> Output next_state=null (STAY IN STATE).
-   - **CRITICAL**: Do NOT search. Just reject invalid input. Valid info must be substantial.
-5. PAID:
-   - Conversation ends or loops back to browsing.
+RULES:
+1. If state is "browsing" and user mentions ANY product word (headphone, shoe, phone, charger, bag, etc.) -> SEARCH.
+2. If user says just "hi", "hello", "hey" with nothing else -> NO tool (greeting).
+3. If state is "awaiting_payment" and user says "paid" or "I paid" -> check_order_status.
+4. If state is "collecting_delivery_details" and user gives name+phone+address -> update delivery_details.
 
-Output JSON ONLY:
-{{
-  "tool": "tool_name" or null,
-  "args": {{ "arg": "value" }},
-  "next_state": "new_state_name" or null,
-  "state_updates": {{ "key": "value" }}
-}}
+EXAMPLES:
+User: "Headphone" -> {{"tool": "search_shop_products", "args": {{"query": "headphone"}}}}
+User: "Tell me about headphone" -> {{"tool": "search_shop_products", "args": {{"query": "headphone"}}}}
+User: "I need a charger" -> {{"tool": "search_shop_products", "args": {{"query": "charger"}}}}
+User: "Do you have bags?" -> {{"tool": "search_shop_products", "args": {{"query": "bags"}}}}
+User: "wireless mouse" -> {{"tool": "search_shop_products", "args": {{"query": "wireless mouse"}}}}
+User: "hi" -> {{"tool": null}}
+User: "hello there" -> {{"tool": null}}
+User: "I paid" (state=awaiting_payment) -> {{"tool": "check_order_status"}}
+User: "John, 08012345678, 5 Lagos Street" (state=collecting_delivery_details) -> {{"tool": null, "next_state": "paid", "state_updates": {{"delivery_details": {{"name": "John", "phone": "08012345678", "address": "5 Lagos Street"}}}}}}
+
+OUTPUT ONLY VALID JSON (no extra text):
+{{"tool": "tool_name_or_null", "args": {{}}, "next_state": null, "state_updates": {{}}}}
 """
 
-# Response Generation System Prompt
-# Response Generation System Prompt
-RESPONSE_SYSTEM_PROMPT = """You are a helpful sales assistant for "{shop_name}".
-Your goal is to be friendly and persuade customers to buy.
+# Response Generation System Prompt - Simplified
+RESPONSE_SYSTEM_PROMPT = """You are a friendly sales assistant for "{shop_name}".
 
-CURRENT STATUS: {status}
+STATUS: {status}
+TOOL RESULTS: {tool_results}
 PAYMENT LINK: {payment_link}
 
-GUIDELINES:
-- **Tone**: Friendly, human, and professional.
-- **Conciseness**: VITAL. Do NOT list categories or generic "Welcome" text if you found a specific product.
-- **Directness**: If the user asked for X and you found X, talk ONLY about X.
+INSTRUCTIONS:
+1. If TOOL RESULTS contains a 'message' field, USE THAT MESSAGE EXACTLY (it has product info + buy links).
+2. If TOOL RESULTS contains products but no message, summarize: "I found [name] for [price]. [link if available]"
+3. If TOOL RESULTS is empty/error after a search, say: "Sorry, I couldn't find that. Try another product name?"
+4. If no search was done (user just said hi/hello), say: "Welcome to {shop_name}! What product are you looking for?"
+5. If STATUS is "awaiting_payment", remind them of the payment link.
+6. If STATUS is "collecting_delivery_details", ask for name, phone, and address.
+7. If STATUS is "paid", confirm the order.
 
-INSTRUCTIONS BY STATUS:
-- **browsing**: 
-  - IF TOOL RETURNED 'message' (Pre-formatted): **YOU MUST USE THIS MESSAGE EXACTLY**. Do not rewrite it.
-  - IF SEARCH RESULTS FOUND: "I found [Product Name] (Stock: [Qty]). Price: [Price]. \n\n[Display Image if available]\n\n[IF LINK EXISTS: Here is your link to buy: [Pay Now]({{payment_link}})]\n[IF NO LINK: Would you like to buy this?]"
-  - IF NO SEARCH PERFORMED (User said 'hi', 'hello', etc.): "Welcome to [Shop Name]! I'm here to help you find the perfect product. What are you looking for today?"
-  - IF NO RESULTS FOUND (After search): Apologize and suggest categories.
-- **product_selected**: "Great! To buy, click here: [Pay Now]({{payment_link}})."
-- **awaiting_payment**:
-  - IF PAYMENT LINK EXISTS: "Here is your link: [Pay Now]({{payment_link}})."
-  - IF NOT: "Generating link..."
-- **collecting_delivery_details**: 
-  - IF PREVIOUS TOOL OUTPUT WAS 'check_order_status': "Payment received! Please give me your **Name**, **Phone**, and **Address**."
-  - IF USER SENT GIBBERISH/INVALID INFO: "That doesn't look like your details. Maybe it was a mistake? Please provide your **Name**, **Phone**, and **Address**."
-- **paid**: "Order confirmed! We will deliver to **{delivery_address}**."
+Keep responses SHORT and helpful. Don't repeat the welcome message if you already searched.
 """
 
 def process_message(state: CustomerAgentState) -> CustomerAgentState:
@@ -141,6 +120,21 @@ def process_message(state: CustomerAgentState) -> CustomerAgentState:
             )
         except Exception:
             pass
+        
+        # FALLBACK: If LLM returned tool=null but user message looks like a product query, force search
+        # This prevents the "welcome loop" when the model is uncertain
+        if decision.get("tool") is None and current_status == "browsing":
+            user_msg = state["messages"][-1]["content"].lower().strip() if state["messages"] else ""
+            # Check if it's NOT a greeting
+            greetings = {"hi", "hello", "hey", "good morning", "good afternoon", "good evening", "howdy", "yo"}
+            is_greeting = user_msg in greetings or user_msg.startswith("hi ") or user_msg.startswith("hello ")
+            
+            # If not a greeting and message has substance (>2 chars), assume it's a product query
+            if not is_greeting and len(user_msg) > 2:
+                print(f"[customer_agent] FALLBACK: Forcing search for '{user_msg}'")
+                decision["tool"] = "search_shop_products"
+                decision["args"] = {"query": user_msg}
+                state["context"]["decision"] = decision
         
         # Apply state updates immediately
         if decision.get("next_state"):
@@ -337,39 +331,19 @@ def synthesize_response(state: CustomerAgentState) -> CustomerAgentState:
     client = create_client()
     
     tool_results = state["context"].get("tool_result")
-    user_message = state["messages"][-1]["content"]
     
     system_msg = RESPONSE_SYSTEM_PROMPT.format(
         shop_name=state["trader_name"],
-        whatsapp=state["whatsapp_number"],
         status=state.get("status", "browsing"),
-        payment_link=state.get("payment_link", "Generating..."),
-        product_id=state.get("product_id", "current product"),
-        delivery_address=(state.get("delivery_details") or {}).get("address") or (state.get("delivery_details") or {}).get("Address", "your address"),
-        tool_results=json.dumps(tool_results, indent=2) if tool_results else "No data found.",
-        user_message=user_message
+        payment_link=state.get("payment_link", ""),
+        tool_results=json.dumps(tool_results, indent=2) if tool_results else "No results.",
     )
     
-    # We pass the conversation history too for context?
-    # The spec says "Conversation history" in state, so yes.
-    # But we want the system prompt to guide the latest answer.
-    
-    messages = [{"role": "system", "content": system_msg}]
-    # Append recent history (last 5 messages) to keep context?
-    # state["messages"] includes the last user message.
-    # We need to be careful not to duplicate the last message if we used it in prompt explicitly.
-    # Actually, simpler: System Prompt + History. 
-    # But we injected tool results in System Prompt.
-    
-    # Correct approach:
-    # 1. System Prompt (with tool results)
-    # 2. History (excluding last message if we want to treat it specially, but usually just include it)
-    
-    # Let's rebuild messages
-    msgs = [{"role": "system", "content": system_msg}]
-    # Add previous messages? 
-    # Providing full history might confuse the tool context if not careful, 
-    # but strictly speaking `synthesize_response` is generating the answer to the *last* message.
+    # System prompt + last user message
+    msgs = [
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": state["messages"][-1]["content"]}
+    ]
     
     try:
         response = client.chat.completions.create(
@@ -387,38 +361,20 @@ def synthesize_response(state: CustomerAgentState) -> CustomerAgentState:
     return state
 
 def generate_response(state: CustomerAgentState) -> CustomerAgentState:
-    """Generate response without tools (chit-chat or state-based fallback)."""
+    """Generate response without tools (chit-chat/greeting only)."""
     client = create_client()
     
-    # Use the same state-aware system prompt, but with no tool results
     user_message = state["messages"][-1]["content"]
-    
-    # Check if we should use the specialized prompt or a generic one?
-    # Actually, RESPONSE_SYSTEM_PROMPT is designed to handle all states.
-    # We just pass "No data found" for tool results.
     
     system_msg = RESPONSE_SYSTEM_PROMPT.format(
         shop_name=state["trader_name"],
-        whatsapp=state["whatsapp_number"],
         status=state.get("status", "browsing"),
-        payment_link=state.get("payment_link", "Generating..."),
-        product_id=state.get("product_id", "current product"),
-        delivery_address=(state.get("delivery_details") or {}).get("address") or (state.get("delivery_details") or {}).get("Address", "your address"),
-        tool_results="No specific tool output. Proceed based on status.",
-        user_message=user_message
+        payment_link=state.get("payment_link", ""),
+        tool_results="No search performed (user greeting or chitchat).",
     )
     
-    # Combine with history? 
-    # synthesize_response logic was: [System] + (maybe history?)
-    # Let's trust the System Prompt to guide the immediate response especially for invalid input rejection.
-    
     messages = [{"role": "system", "content": system_msg}]
-    # We can perform a lightweight append of recent context if needed, 
-    # but for "rejecting invalid input", the system prompt instruction is forceful enough.
-    # To be safe for chitchat, we include history.
     messages.extend(state["messages"][-3:]) 
-    
-    # Combined Logic
     
     try:
         response = client.chat.completions.create(
@@ -429,7 +385,7 @@ def generate_response(state: CustomerAgentState) -> CustomerAgentState:
         )
         reply = response.choices[0].message.content
     except Exception as e:
-        print(f"API Error in synthesize_response: {e}")
+        print(f"API Error in generate_response: {e}")
         reply = "I'm experiencing high traffic right now. Please try again in a moment."
     
     state["messages"].append({"role": "assistant", "content": reply})
