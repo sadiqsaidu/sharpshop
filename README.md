@@ -4,14 +4,16 @@ Welcome to **SharpShop** — a headless e-commerce platform where Nigerian trade
 
 ## Architecture
 - 🤖 **WhatsApp Bot (Python)**: AI agent for sellers to add/manage products via chat
+- 🛍️ **Customer Agent (Python)**: AI assistant on web storefront for finding products and buying
 - 📊 **Supabase Database**: Real-time bridge between WhatsApp and web
 - 🎨 **React Frontend**: TikTok-style vertical product feed with instant updates
 - ⚡ **AI-Powered**: Uses LangGraph + Groq (Llama 3.3) for natural language understanding
 
 ## Features
-- 🤖 **Conversational AI**: Sellers add products by chatting in WhatsApp
+- 🤖 **Conversational AI (Seller)**: Sellers add products by chatting in WhatsApp
+- 💬 **Conversational AI (Customer)**: Customers chat with AI on the web to find specific items, check stock, and get payment links
 - 📦 **Real-time Sync**: Products appear instantly in the React storefront
-- 📱 **WhatsApp Checkout**: Customers click "Buy Now" → redirect to seller's WhatsApp
+- 💳 **Agent Payments**: Customer Agent generates secure payment links directly in chat
 - ⚡ **Image Support**: Upload product photos from WhatsApp → stored in Supabase
 - 🎯 **No Dashboard Needed**: Sellers never touch a website
 
@@ -61,15 +63,24 @@ Welcome to **SharpShop** — a headless e-commerce platform where Nigerian trade
 3. Redirected to seller's WhatsApp with pre-filled message
 4. Complete purchase through WhatsApp chat
 
+### For Customers (via Chat):
+1. Ask "Do you have wired mouse?" or "Show me cheap sneakers"
+2. AI checks real-time stock and shows results
+3. Say "I'll take it" -> AI generates a secure **Flutterwave payment link**
+4. Pay online -> Seller gets notified via WhatsApp automatically
+
 ## Project Structure
 ```
 sharpshop/
 ├── server.py           # FastAPI webhook handler for WhatsApp
-├── agent.py            # LangGraph AI agent with conversation flow
-├── tools.py            # Supabase CRUD operations for products
+├── agent.py            # Seller AI Agent (LangGraph)
+├── customer_agent.py   # Customer AI Agent (LangGraph)
+├── tools.py            # Seller Tools
+├── customer_tools.py   # Customer Tools (Search, Stock, Orders)
 ├── database.py         # Trader authentication & creation
 ├── storage.py          # Image upload to Supabase Storage
 ├── config.py           # Environment variables & settings
+├── customer_config.py  # Customer Agent settings
 ├── test_agent.py       # Local testing without WhatsApp
 ├── SETUP_GUIDE.md      # Complete setup instructions
 └── Sharp-Shop FrontEnd/ # React storefront (separate folder)
